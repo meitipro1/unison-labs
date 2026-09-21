@@ -1,0 +1,80 @@
+/**
+ * Where a library would otherwise speak for the product.
+ *
+ * Pure text, no imports, no chain: a dependency's error is a string problem, and
+ * keeping it here means the rules can be tested without loading an RPC client.
+ */
+
+/**
+ * A library's error, rewritten in the product's voice.
+ *
+ * viem throws multi-line strings that carry their own version number, and one of
+ * them reached the refusal panel verbatim during review:
+ *
+ *   User rejected the request. Details: user rejected Version: viem@2.55.17
+ *
+ * Chapter five allows three parts and no more -- what happened, which part, what
+ * follows -- and nothing in it apologises or names a dependency. A wallet
+ * declining is not a failure of the submission either, so it does not read like
+ * one.
+ */
+/**
+ * `expected` is the network the caller needs, by name.
+ *
+ * Without it the only honest thing to say about a chain error is that the
+ * wallet is somewhere else, which is exactly the sentence that reads as wrong
+ * to somebody looking at the right network. Every caller that knows the answer
+ * passes it, and then the message names it.
+ */
+export function readableError(error: unknown, expected?: string): string {
+  const raw = String((error as Error)?.message ?? error ?? "");
+  const code = (error as { code?: number })?.code;
+
+  /* An error this product wrote is already in this product's voice, and the
+     rules below would flatten it: a sentence naming two networks matches the
+     chain rule and would come back out as "a different network", which is the
+     one thing the person reading it already believes is wrong. */
+  if ((error as { humane?: boolean })?.humane && raw) return raw;
+
+  if (code === 4001 || /user rejected|user denied|rejected the request/i.test(raw)) {
+    return "Nothing was signed, so nothing was submitted. The gate above ran in this browser and cost nothing.";
+  }
+  if (
+    /no wallet|window\.ethereum|provider/i.test(raw) &&
+    /undefined|not found|unavailable/i.test(raw)
+  ) {
+    return "No wallet is available in this browser, so nothing can be signed. The gate above ran here and cost nothing.";
+  }
+  if (/insufficient funds|intrinsic gas/i.test(raw)) {
+    return "The account cannot cover this transaction, so nothing was submitted.";
+  }
+  /* A wallet that already has a window open is not on the wrong network. It
+     used to be reported as one, because the method it is busy with is called
+     wallet_switchEthereumChain and the rule below matched its name. */
+  if (/already pending|already in progress|request of type/i.test(raw)) {
+    return "Your wallet already has a request open, so nothing was submitted. Answer that one first, then press this again.";
+  }
+  if (/unrecognized chain|chain.{0,12}not (been )?added|add.{0,12}chain/i.test(raw)) {
+    return expected
+      ? `Your wallet does not have ${expected} added yet, so nothing was submitted. Add it in the wallet and press this again.`
+      : "Your wallet does not have this network added yet, so nothing was submitted.";
+  }
+  if (/chain|network/i.test(raw) && /mismatch|unsupported|switch/i.test(raw)) {
+    return expected
+      ? `Your wallet is not on ${expected}, so nothing was submitted. Point it at ${expected} and press this again.`
+      : "The wallet is pointed at a different network, so nothing was submitted.";
+  }
+  if (/fetch failed|unknown rpc|ECONNRESET|ETIMEDOUT|socket hang up/i.test(raw)) {
+    return "The node did not answer, so nothing was submitted. Nothing was spent.";
+  }
+
+  // Anything unrecognised: keep the first sentence and drop the library's
+  // stack, its "Details:" tail and its version banner. Close it if the library
+  // did not -- a fragment with no full stop reads as a truncated page rather
+  // than as something the product meant to say.
+  const first = raw.split(/\n|Details:|Version:/)[0].trim();
+  if (first && first.length < 220) {
+    return /[.?]$/.test(first) ? first : `${first.replace(/[,;:\s]+$/, "")}.`;
+  }
+  return "The submission did not land, and the node gave no reason a person could act on.";
+}

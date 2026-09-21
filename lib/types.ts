@@ -1,0 +1,159 @@
+/**
+ * The shapes the contract actually returns.
+ *
+ * Every view on the contract returns a json string rather than a struct,
+ * because a report is a nest of two subjects holding five marks each and the
+ * alternative is three storage dataclasses whose field order would be load
+ * bearing forever. These types describe what comes out of `JSON.parse`.
+ *
+ * Nothing here is a source of truth. If a field disagrees with
+ * contracts/unison.py, the contract is right.
+ */
+
+export type Anchor = string;
+
+export type Criterion = {
+  id: string;
+  name: string;
+  /** Exactly three: what a 0, a 1 and a 2 look like. */
+  anchors: [Anchor, Anchor, Anchor];
+  /**
+   * "facts" -> settled by a count over the agreed source, identically on every
+   * validator. "judgment" -> decided by a model, under the published tolerance.
+   */
+  decided_by?: "facts" | "judgment";
+};
+
+export type Subject = {
+  kind: "contract" | "site";
+  criteria: Criterion[];
+};
+
+/**
+ * The tolerance two independent markings must fall inside to count as the same
+ * answer. Published for the same reason the anchors are: it decides whether a
+ * report exists at all. See docs/judgment-layer.md.
+ */
+export type AgreementRule = {
+  max_point_gap: number;
+  max_divergent_criteria: number;
+  band_must_match: boolean;
+  summed_by: string;
+  reasons_compared: boolean;
+  counted_criteria: string[];
+  judged_criteria: string[];
+};
+
+export type Rubric = {
+  version: string;
+  max_score: number;
+  max_total: number;
+  bands: Array<{ floor: number; name: string }>;
+  agreement?: AgreementRule;
+  subjects: Subject[];
+  limits: {
+    reason_chars: number;
+    source_bytes: number;
+    prompt_source_chars: number;
+    prompt_site_chars: number;
+  };
+};
+
+export type Mark = {
+  id: string;
+  score: number;
+  reason: string;
+};
+
+export type ReportSubject = {
+  kind: "contract" | "site";
+  target: string;
+  total: number;
+  band: string;
+  marks: Mark[];
+};
+
+export type Report = {
+  id: number;
+  rubric: string;
+  created_at: string;
+  submitter: string;
+  source_url: string;
+  site_url: string;
+  /**
+   * Whether the url above names something permanent.
+   *
+   * `pinned` is a commit, which cannot be repointed. `moving` is a branch or a
+   * tag, which can. `opaque` is a host with no revision in its paths at all.
+   * The digest is the report's identity either way; this says whether the
+   * citation beside it can be followed back to the same bytes.
+   */
+  revision?: "pinned" | "moving" | "opaque";
+  revision_ref?: string;
+  digest: string;
+  source_chars: number;
+  gate: {
+    passed: number;
+    total: number;
+    rows: Array<{ id: string; required: boolean; passed: boolean }>;
+  };
+  /** One or two. There is never an empty slot, a dash or a zero for a missing site. */
+  subjects: ReportSubject[];
+  /**
+   * An appeal, when one has been heard. `outcome` is the whole point: a fresh
+   * jury re-marked the disputed criterion against the same published anchors,
+   * and either landed on the same score or did not. `was` and `now` are kept
+   * apart so a superseded report still shows what it used to say.
+   */
+  /** Advisory, never scored. Absent on a report written before the check existed. */
+  rules?: RuleFinding[];
+  /** What deploying this source asks for, read off its __init__ by the contract. */
+  init_params?: InitParam[];
+  contest?: {
+    criterion: string;
+    at: string;
+    by: string;
+    was: number;
+    now: number;
+    outcome: "upheld" | "superseded";
+    reason: string;
+  };
+};
+
+export type SplitRow = {
+  id: string;
+  kind: "contract" | "site";
+  name: string;
+  /** A counted criterion is never put to the jury, so it cannot split. */
+  decided_by?: "facts" | "judgment";
+  splits: number;
+  reads_as: "ambiguous" | "workable" | "clear" | "counted";
+};
+
+export type Stats = {
+  reports: number;
+  contested: number;
+  splits: number;
+  first_report_id: number;
+  rubric: string;
+};
+
+
+
+/**
+ * One finding from the contract's rules check. The title and the fix are
+ * published once by `rules()` and joined in on the page, so a report stores
+ * only which check fired, on which line, and what it is about.
+ */
+export type RuleFinding = { check: string; line: number; name: string };
+
+/** A published rules check, as `rules()` returns it. */
+export type RuleCheck = { id: string; rule: string; title: string; fix: string };
+
+/**
+ * One parameter the deploy form asks for. Stored on the report as
+ * `init_params` rather than `constructor`, since every plain object already
+ * answers to that name, and an old report without the key would hand back
+ * the Object function instead of undefined.
+ */
+export type InitParam = { name: string; type: string; optional: boolean; keyword: boolean };

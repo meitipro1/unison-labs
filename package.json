@@ -1,0 +1,49 @@
+{
+  "name": "unison",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Contract review scored out of ten against a rubric published before anyone was scored, judged by GenLayer's validators.",
+  "license": "MIT",
+  "homepage": "https://unisonlabs.tech",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/meitipro/unison-labs.git"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "next dev -p 4400",
+    "build": "next build",
+    "start": "next start -p 4400",
+    "typecheck": "tsc --noEmit",
+    "check": "node scripts/check.mjs",
+    "lint:contract": "node scripts/lint-contract.mjs",
+    "test": "node scripts/check.mjs && node --test \"tests/parity/*.test.mjs\" && python contracts/test_helpers.py",
+    "deploy": "node scripts/deploy.mjs",
+    "probe": "node scripts/probe.mjs",
+    "verify": "node scripts/verify.mjs",
+    "contest": "node scripts/contest.mjs",
+    "match": "node scripts/match.mjs"
+  },
+  "dependencies": {
+    "@fontsource/dotgothic16": "^5.3.0",
+    "@fontsource/ibm-plex-mono": "^5.2.5",
+    "@fontsource/inter": "^5.3.0",
+    "genlayer-js": "^1.2.0",
+    "genlayer-js-next": "npm:genlayer-js@^2.0.0-rc.1",
+    "next": "^14.2.32",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "three": "^0.185.1",
+    "viem": "^2.55.11"
+  },
+  "devDependencies": {
+    "@types/node": "20.14.10",
+    "@types/react": "18.3.3",
+    "@types/react-dom": "18.3.0",
+    "@types/three": "^0.185.4",
+    "typescript": "5.5.3"
+  },
+  "engines": {
+    "node": ">=18.18"
+  }
+}
